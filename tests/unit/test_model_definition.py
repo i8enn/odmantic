@@ -15,6 +15,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from uuid import UUID, uuid4
 
 import pytest
 from bson import ObjectId
@@ -70,6 +71,21 @@ def test_get_collection_name_pos():
         ...
 
     assert +Thing == "thing"
+
+
+def test_correct_inheritance_model():
+    class TheParentModel(Model):
+        id: UUID = Field(default_factory=uuid4, primary_field=True)
+
+    class InheritModel(TheParentModel):
+        inherit_field: str
+
+    assert issubclass(TheParentModel.__annotations__.get("id", type), UUID)
+    assert issubclass(InheritModel, Model)
+    assert "inherit_field" in InheritModel.__fields__.keys()
+    assert "id" in InheritModel.__fields__.keys()
+    assert issubclass(InheritModel.__annotations__.get("id", type), UUID)
+    assert InheritModel.__primary_field__ == "id"
 
 
 def test_duplicated_key_name():
