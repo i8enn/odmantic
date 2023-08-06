@@ -378,6 +378,9 @@ class BaseModelMetaclass(pydantic.main.ModelMetaclass):
                     patched_bases.append(b.__pydantic_model__)
                 else:
                     patched_bases.append(b)
+            # Added inheritance model support
+            if Model not in patched_bases and EmbeddedModel not in patched_bases:
+                patched_bases.insert(0, Model)
             bases = tuple(patched_bases)
             # Nullify unset docstring (to avoid getting the docstrings from the parent
             # classes)
@@ -427,27 +430,39 @@ class ModelMetaclass(BaseModelMetaclass):
             mcs.__validate_cls_namespace__(name, namespace)
             config: BaseODMConfig = namespace["Config"]
             primary_field: Optional[str] = None
-            odm_fields: Dict[str, ODMBaseField] = namespace["__odm_fields__"]
-
-            for field_name, field in odm_fields.items():
-                if isinstance(field, ODMField) and field.primary_field:
-                    primary_field = field_name
-                    break
-
-            if primary_field is None:
-                if "id" in odm_fields:
-                    raise TypeError(
-                        "can't automatically generate a primary field since an 'id' "
-                        "field already exists"
-                    )
-                primary_field = "id"
-                odm_fields["id"] = ODMField(
-                    primary_field=True, key_name="_id", model_config=config
+            odm_fields: Dict[str, ODMBaseField] = {}
+            for base in bases:
+                odm_fields.update(getattr(base, "__odm_fields__", {}))
+                namespace["__annotations__"].update(
+                    getattr(base, "__annotations__", {})
                 )
-                namespace["id"] = PDField(default_factory=ObjectId)
-                namespace["__annotations__"]["id"] = ObjectId
+                namespace["__primary_field__"] = getattr(
+                    base, "__primary_field__", None
+                )
+            odm_fields.update(namespace["__odm_fields__"])
 
-            namespace["__primary_field__"] = primary_field
+            primary_field = namespace.get("__primary_field__")
+            if primary_field is None:
+                for field_name, field in odm_fields.items():
+                    if isinstance(field, ODMField) and field.primary_field:
+                        primary_field = field_name
+                        break
+
+                if primary_field is None:
+                    if "id" in odm_fields:
+                        raise TypeError(
+                            "can't automatically generate a primary field since an 'id' "
+                            "field already exists"
+                        )
+                    primary_field = "id"
+                    odm_fields["id"] = ODMField(
+                        primary_field=True, key_name="_id", model_config=config
+                    )
+                    namespace["id"] = PDField(default_factory=ObjectId)
+                    namespace["__annotations__"]["id"] = ObjectId
+
+                namespace["__primary_field__"] = primary_field
+                namespace["__odm_fields__"] = odm_fields
 
             if config.collection is not None:
                 collection_name = config.collection
