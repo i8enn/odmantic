@@ -433,12 +433,7 @@ class ModelMetaclass(BaseModelMetaclass):
             primary_field: Optional[str] = None
             odm_fields: Dict[str, ODMBaseField] = {}
             for base in bases:
-                base_odm_field = getattr(base, "__odm_fields__", {})
-                namespace.update({
-                    name: field.pydantic_field.field_info
-                    for name, field in base_odm_field.items()
-                })
-                odm_fields.update(base_odm_field)
+                odm_fields.update(getattr(base, "__odm_fields__", {}))
                 namespace["__annotations__"].update(
                     getattr(base, "__annotations__", {})
                 )
@@ -468,7 +463,7 @@ class ModelMetaclass(BaseModelMetaclass):
                     namespace["__annotations__"]["id"] = ObjectId
 
                 namespace["__primary_field__"] = primary_field
-                namespace["__odm_fields__"] = odm_fields
+            namespace["__odm_fields__"] = odm_fields
 
             if config.collection is not None:
                 collection_name = config.collection
