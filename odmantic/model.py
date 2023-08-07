@@ -434,7 +434,10 @@ class ModelMetaclass(BaseModelMetaclass):
             odm_fields: Dict[str, ODMBaseField] = {}
             for base in bases:
                 base_odm_field = getattr(base, "__odm_fields__", {})
-                namespace.update({name: field for name, field in base_odm_field.items()})
+                namespace.update({
+                    name: field.pydantic_field.field_info
+                    for name, field in base_odm_field.items()
+                })
                 odm_fields.update(base_odm_field)
                 namespace["__annotations__"].update(
                     getattr(base, "__annotations__", {})
