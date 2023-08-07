@@ -1,6 +1,7 @@
 import datetime
 import decimal
 import enum
+import inspect
 import pathlib
 import uuid
 import warnings
@@ -432,7 +433,9 @@ class ModelMetaclass(BaseModelMetaclass):
             primary_field: Optional[str] = None
             odm_fields: Dict[str, ODMBaseField] = {}
             for base in bases:
-                odm_fields.update(getattr(base, "__odm_fields__", {}))
+                base_odm_field = getattr(base, "__odm_fields__", {})
+                namespace.update({name: field for name, field in base_odm_field.items()})
+                odm_fields.update(base_odm_field)
                 namespace["__annotations__"].update(
                     getattr(base, "__annotations__", {})
                 )

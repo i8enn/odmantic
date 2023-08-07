@@ -84,6 +84,7 @@ def test_correct_inheritance_model():
     assert issubclass(InheritModel, Model)
     assert "inherit_field" in InheritModel.__fields__.keys()
     assert "id" in InheritModel.__fields__.keys()
+    assert getattr(InheritModel, "id", None) == TheParentModel.id
     assert issubclass(InheritModel.__annotations__.get("id", type), UUID)
     assert InheritModel.__primary_field__ == "id"
 
