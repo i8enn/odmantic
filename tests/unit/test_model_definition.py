@@ -80,13 +80,32 @@ def test_correct_inheritance_model():
     class InheritModel(TheParentModel):
         inherit_field: str
 
+    class RefModel(TheParentModel):
+        inherit: InheritModel = Reference()
+
     assert issubclass(TheParentModel.__annotations__.get("id", type), UUID)
     assert issubclass(InheritModel, Model)
     assert "inherit_field" in InheritModel.__fields__.keys()
-    assert "id" in InheritModel.__fields__.keys()
-    assert getattr(InheritModel, "id", None) == TheParentModel.id
-    assert issubclass(InheritModel.__annotations__.get("id", type), UUID)
-    assert InheritModel.__primary_field__ == "id"
+    assert InheritModel.__primary_field__ == TheParentModel.__primary_field__
+    for name, field in TheParentModel.__odm_fields__.items():
+        assert InheritModel.__odm_fields__.get(name) == field
+        assert (
+            InheritModel.__fields__.get(name).field_info
+            == field.pydantic_field.field_info
+        )
+        assert getattr(TheParentModel, name, None) == getattr(InheritModel, name, None)
+        assert InheritModel.__annotations__.get(
+            name, type
+        ) == TheParentModel.__annotations__.get(name)
+
+        assert RefModel.__odm_fields__.get(name) == field
+        assert (
+            RefModel.__fields__.get(name).field_info == field.pydantic_field.field_info
+        )
+        assert getattr(TheParentModel, name, None) == getattr(RefModel, name, None)
+        assert RefModel.__annotations__.get(
+            name, type
+        ) == TheParentModel.__annotations__.get(name)
 
 
 def test_duplicated_key_name():
